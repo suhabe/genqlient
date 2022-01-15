@@ -3,7 +3,7 @@
 package test
 
 import (
-	"github.com/Khan/genqlient/graphql"
+	"github.com/suhabe/genqlient/graphql"
 )
 
 // EmptyInterfaceResponse is returned by EmptyInterface on success.

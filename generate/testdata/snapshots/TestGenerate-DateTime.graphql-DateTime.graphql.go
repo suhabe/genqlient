@@ -5,7 +5,7 @@ package test
 import (
 	"time"
 
-	"github.com/Khan/genqlient/graphql"
+	"github.com/suhabe/genqlient/graphql"
 )
 
 // __convertTimezoneInput is used internally by genqlient

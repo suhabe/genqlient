@@ -3,8 +3,8 @@
 package test
 
 import (
-	"github.com/Khan/genqlient/graphql"
-	"github.com/Khan/genqlient/internal/testutil"
+	"github.com/suhabe/genqlient/graphql"
+	"github.com/suhabe/genqlient/internal/testutil"
 )
 
 // RecursionRecurRecursive includes the requested fields of the GraphQL type Recursive.

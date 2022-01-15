@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/Khan/genqlient/graphql"
+	"github.com/suhabe/genqlient/graphql"
 )
 
 // UnionNoFragmentsQueryRandomLeafArticle includes the requested fields of the GraphQL type Article.

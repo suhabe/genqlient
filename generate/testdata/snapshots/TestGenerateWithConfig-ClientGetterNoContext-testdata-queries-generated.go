@@ -3,7 +3,7 @@
 package queries
 
 import (
-	"github.com/Khan/genqlient/internal/testutil"
+	"github.com/suhabe/genqlient/internal/testutil"
 )
 
 // SimpleQueryResponse is returned by SimpleQuery on success.

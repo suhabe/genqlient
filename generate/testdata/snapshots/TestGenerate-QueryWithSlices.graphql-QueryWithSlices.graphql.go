@@ -3,7 +3,7 @@
 package test
 
 import (
-	"github.com/Khan/genqlient/graphql"
+	"github.com/suhabe/genqlient/graphql"
 )
 
 // QueryWithSlicesResponse is returned by QueryWithSlices on success.

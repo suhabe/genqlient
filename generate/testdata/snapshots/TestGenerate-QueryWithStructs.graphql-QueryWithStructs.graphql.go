@@ -3,7 +3,7 @@
 package test
 
 import (
-	"github.com/Khan/genqlient/graphql"
+	"github.com/suhabe/genqlient/graphql"
 )
 
 // QueryWithStructsResponse is returned by QueryWithStructs on success.

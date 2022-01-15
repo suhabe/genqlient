@@ -5,8 +5,8 @@ package queries
 import (
 	"context"
 
-	"github.com/Khan/genqlient/graphql"
-	"github.com/Khan/genqlient/internal/testutil"
+	"github.com/suhabe/genqlient/graphql"
+	"github.com/suhabe/genqlient/internal/testutil"
 )
 
 // Check that context_type from genqlient.yaml implements context.Context.

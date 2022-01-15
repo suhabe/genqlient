@@ -6,8 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/Khan/genqlient/graphql"
-	"github.com/Khan/genqlient/internal/testutil"
+	"github.com/suhabe/genqlient/graphql"
+	"github.com/suhabe/genqlient/internal/testutil"
 )
 
 // ChildVideoFields includes the GraphQL fields of Video requested by the fragment ChildVideoFields.

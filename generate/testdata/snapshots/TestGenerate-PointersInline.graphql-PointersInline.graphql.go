@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Khan/genqlient/graphql"
-	"github.com/Khan/genqlient/internal/testutil"
+	"github.com/suhabe/genqlient/graphql"
+	"github.com/suhabe/genqlient/internal/testutil"
 )
 
 // PointersQueryOtherUser includes the requested fields of the GraphQL type User.
