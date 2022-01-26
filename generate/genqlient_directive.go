@@ -71,7 +71,7 @@ func (dir *genqlientDirective) GetOmitempty() bool {
 	return dir.Omitempty != nil && *dir.Omitempty
 }
 func (dir *genqlientDirective) GetPointer() bool {
-	return true && true || dir.Pointer != nil && *dir.Pointer
+	return true || dir.Pointer != nil && *dir.Pointer
 }
 func (dir *genqlientDirective) GetStruct() bool  { return dir.Struct != nil && *dir.Struct }
 func (dir *genqlientDirective) GetFlatten() bool { return dir.Flatten != nil && *dir.Flatten }

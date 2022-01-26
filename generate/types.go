@@ -364,7 +364,7 @@ func (typ *goStructType) WriteDefinition(w io.Writer, g *generator) error {
 	for _, field := range typ.Fields {
 		writeDescription(w, field.Description)
 		jsonTag := `"` + field.JSONName
-		if /*field.Omitempty && */ field.GoType.Reference() != "int" && field.GoType.Reference() != "int64" && field.GoType.Reference() != "bool" && field.GoType.Reference() != "float64" {
+		if true || field.Omitempty {
 			jsonTag += ",omitempty"
 		}
 		jsonTag += `"`
