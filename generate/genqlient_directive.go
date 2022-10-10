@@ -67,14 +67,10 @@ func (dir *genqlientDirective) String() string {
 	return strings.Join(lines, "\n")
 }
 
-func (dir *genqlientDirective) GetOmitempty() bool {
-	return dir.Omitempty != nil && *dir.Omitempty
-}
-func (dir *genqlientDirective) GetPointer() bool {
-	return true || dir.Pointer != nil && *dir.Pointer
-}
-func (dir *genqlientDirective) GetStruct() bool  { return dir.Struct != nil && *dir.Struct }
-func (dir *genqlientDirective) GetFlatten() bool { return dir.Flatten != nil && *dir.Flatten }
+func (dir *genqlientDirective) GetOmitempty() bool { return dir.Omitempty != nil && *dir.Omitempty }
+func (dir *genqlientDirective) GetPointer() bool   { return true }
+func (dir *genqlientDirective) GetStruct() bool    { return dir.Struct != nil && *dir.Struct }
+func (dir *genqlientDirective) GetFlatten() bool   { return dir.Flatten != nil && *dir.Flatten }
 
 func setBool(optionName string, dst **bool, v *ast.Value, pos *ast.Position) error {
 	if *dst != nil {

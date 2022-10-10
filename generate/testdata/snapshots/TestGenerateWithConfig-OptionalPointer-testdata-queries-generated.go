@@ -5,7 +5,7 @@ package queries
 import (
 	"context"
 
-	"github.com/Khan/genqlient/graphql"
+	"github.com/suhabe/genqlient/graphql"
 )
 
 // ListInputQueryResponse is returned by ListInputQuery on success.

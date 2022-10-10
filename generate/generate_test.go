@@ -177,7 +177,7 @@ func TestGenerateWithConfig(t *testing.T) {
 		}},
 		{"PackageBindings", "", nil, &Config{
 			PackageBindings: []*PackageBinding{
-				{Package: "github.com/Khan/genqlient/internal/testutil"},
+				{Package: "github.com/suhabe/genqlient/internal/testutil"},
 			},
 		}},
 		{"NoContext", "", nil, &Config{
