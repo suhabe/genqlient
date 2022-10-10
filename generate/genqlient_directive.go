@@ -111,8 +111,10 @@ func setString(optionName string, dst *string, v *ast.Value, pos *ast.Position) 
 //
 // If there are multiple genqlient directives are applied to the same node,
 // e.g.
+//
 //	# @genqlient(...)
 //	# @genqlient(...)
+//
 // add will be called several times.  In this case, conflicts between the
 // options are an error.
 func (dir *genqlientDirective) add(graphQLDirective *ast.Directive, pos *ast.Position) error {
@@ -217,6 +219,10 @@ func (dir *genqlientDirective) validate(node interface{}, schema *ast.Schema) er
 			if fieldDir.Omitempty != nil && field.Type.NonNull {
 				return errorf(fieldDir.pos, "omitempty may only be used on optional arguments")
 			}
+
+			if fieldDir.TypeName != "" && fieldDir.Bind != "" && fieldDir.Bind != "-" {
+				return errorf(fieldDir.pos, "typename and bind may not be used together")
+			}
 		}
 	}
 
@@ -259,6 +265,10 @@ func (dir *genqlientDirective) validate(node interface{}, schema *ast.Schema) er
 			return errorf(dir.pos, "for is only applicable to operations and arguments")
 		}
 
+		if dir.TypeName != "" && dir.Bind != "" && dir.Bind != "-" {
+			return errorf(dir.pos, "typename and bind may not be used together")
+		}
+
 		return nil
 	case *ast.Field:
 		if dir.Omitempty != nil {
@@ -280,6 +290,10 @@ func (dir *genqlientDirective) validate(node interface{}, schema *ast.Schema) er
 
 		if len(dir.FieldDirectives) > 0 {
 			return errorf(dir.pos, "for is only applicable to operations and arguments")
+		}
+
+		if dir.TypeName != "" && dir.Bind != "" && dir.Bind != "-" {
+			return errorf(dir.pos, "typename and bind may not be used together")
 		}
 
 		return nil
@@ -494,6 +508,15 @@ func (g *generator) parsePrecedingComment(
 	if queryOptions != nil {
 		// If we are part of an operation/fragment, merge its options in.
 		directive.mergeOperationDirective(node, parentIfInputField, queryOptions)
+
+		// TODO(benkraft): Really we should do all the validation after
+		// merging, probably?  But this is the only check that can fail only
+		// after merging, and it's a bit tricky because the "does not apply"
+		// checks may need to happen before merging so we know where the
+		// directive "is".
+		if directive.TypeName != "" && directive.Bind != "" && directive.Bind != "-" {
+			return "", nil, errorf(directive.pos, "typename and bind may not be used together")
+		}
 	}
 
 	reverse(commentLines)

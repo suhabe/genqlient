@@ -22,17 +22,57 @@ When releasing a new version:
 
 ### Breaking changes:
 
+### New features:
+
+- You can now bind all types from a package in `genqlient.yaml` using the new `package_bindings` option.
+
+### Bug fixes:
+
+- Fixed non-deterministic generated code when querying graphql interfaces
+
+## v0.5.0
+
+Version 0.5.0 adds several new configuration options and convenience features. Note that genqlient now requires Go 1.16 or higher, and is tested through Go 1.18.
+
+### Breaking changes:
+
+- genqlient now requires Go 1.16 or higher.
+- The [`graphql.Client`](https://pkg.go.dev/github.com/Khan/genqlient/graphql#Client) interface now accepts two structs for the request and response, to allow future expansion, rather than several individual arguments.  Clients implementing the interface themselves will need to change the signature; clients who simply call `graphql.NewClient` are unaffected.
+
+### New features:
+
+- genqlient can now run as a portable binary (i.e. without a local checkout of the repository or `go run`).
+- You can now enable `use_extensions` in the configuration file, to receive extensions returned by the GraphQL API server. Generated functions will return extensions as `map[string]interface{}`, if enabled.
+- You can now use `graphql.NewClientUsingGet` to create a client that uses query parameters to pass the query to the GraphQL API server.
+- In config files, `schema`, `operations`, and `generated` can now be absolute paths.
+- You can now configure how nullable types are mapped to Go types in the configuration file. Specifically, you can set `optional: pointer` to have all nullable GraphQL arguments, input fields, and output fields map to pointers.
+
+### Bug fixes:
+
+- genqlient now explicitly rejects argument, operation, and type names which are Go keywords, rather than failing with an opaque error.
+- genqlient now gives better error messages if it thinks your schema is invalid.
+
+## v0.4.0
+
+Version 0.4.0 adds several new configuration options, as well as additional methods to simplify the use of interfaces.
+
+### Breaking changes:
+
 - The `Config` fields `Schema` and `Operations` are now both of type `StringList`.  This does not affect configuration via `genqlient.yaml`, only via the Go API.
+- The `typename` and `bind` options may no longer be combined; doing so will now result in an error.  In practice, any such use was likely in error (and the rules for which would win were confusing and undocumented).
 
 ### New features:
 
 - genqlient now generates getter methods for all fields, even those which do not implement a genqlient-generated interface; this can be useful for callers who wish to define their own interface and have several unrelated genqlient types which have the same fields implement it.
-- genqlient config now accepts either a single or multiple files for the `schema` and `operations` fields (previously it accepted only one `schema`, and required a list of `operations` files).
+- The new `struct_references` option automatically sets the `pointer` and `omitempty` options on fields of struct type; see the [`genqlient.yaml` documentation](docs/genqlient.yaml) for details.
+- genqlient config now accepts either a single or multiple files (or globs) for the `schema` and `operations` fields (previously it accepted only one `schema`, and required a list of `operations` files).
+- genqlient now looks for its config file as `[.]genqlient.y[a]ml` in any ancestor directory, if unspecified, rather than only as `genqlient.yaml` in the current directory.
 - The `typename` option can now be used on basic types (string, int, etc) as well as structs; this can be useful to have genqlient define new types like `type Language string` and use that type for specified fields.
 
 ### Bug fixes:
 
 - In certain very rare cases involving duplicate fields in fragment spreads, genqlient would generate code that failed to compile due to duplicate methods not getting promoted; genqlient now generates correct types.  (See #126 for a more complete description.)
+- genqlient no longer rejects schemas which include the implicitly declared types (`scalar String`, etc.) explicitly; this makes it easier to use schemas generate via introspection.
 
 ## v0.3.0
 

@@ -88,7 +88,7 @@ func (v *UserQueryInput) UnmarshalJSON(b []byte) error {
 				src, dst)
 			if err != nil {
 				return fmt.Errorf(
-					"Unable to unmarshal UserQueryInput.Birthdate: %w", err)
+					"unable to unmarshal UserQueryInput.Birthdate: %w", err)
 			}
 		}
 	}
@@ -137,7 +137,7 @@ func (v *UserQueryInput) __premarshalJSON() (*__premarshalUserQueryInput, error)
 			&src)
 		if err != nil {
 			return nil, fmt.Errorf(
-				"Unable to marshal UserQueryInput.Birthdate: %w", err)
+				"unable to marshal UserQueryInput.Birthdate: %w", err)
 		}
 	}
 	return &retval, nil
@@ -181,25 +181,30 @@ func unexported(
 	client graphql.Client,
 	query UserQueryInput,
 ) (*unexportedResponse, error) {
-	__input := __unexportedInput{
-		Query: query,
-	}
-	var err error
-
-	var retval unexportedResponse
-	err = client.MakeRequest(
-		nil,
-		"unexported",
-		`
+	req := &graphql.Request{
+		OpName: "unexported",
+		Query: `
 query unexported ($query: UserQueryInput) {
 	user(query: $query) {
 		id
 	}
 }
 `,
-		&retval,
-		&__input,
+		Variables: &__unexportedInput{
+			Query: query,
+		},
+	}
+	var err error
+
+	var data unexportedResponse
+	resp := &graphql.Response{Data: &data}
+
+	err = client.MakeRequest(
+		nil,
+		req,
+		resp,
 	)
-	return &retval, err
+
+	return &data, err
 }
 

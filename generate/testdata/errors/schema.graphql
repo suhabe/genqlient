@@ -1,0 +1,11 @@
+type Query {
+  f: String
+  user: User
+}
+
+type User {
+  id: ID!
+  name: ValidScalar!
+}
+
+scalar ValidScalar

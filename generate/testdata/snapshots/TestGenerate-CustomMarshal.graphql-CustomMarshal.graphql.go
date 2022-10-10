@@ -63,7 +63,7 @@ func (v *CustomMarshalUsersBornOnUser) UnmarshalJSON(b []byte) error {
 				src, dst)
 			if err != nil {
 				return fmt.Errorf(
-					"Unable to unmarshal CustomMarshalUsersBornOnUser.Birthdate: %w", err)
+					"unable to unmarshal CustomMarshalUsersBornOnUser.Birthdate: %w", err)
 			}
 		}
 	}
@@ -97,7 +97,7 @@ func (v *CustomMarshalUsersBornOnUser) __premarshalJSON() (*__premarshalCustomMa
 			&src)
 		if err != nil {
 			return nil, fmt.Errorf(
-				"Unable to marshal CustomMarshalUsersBornOnUser.Birthdate: %w", err)
+				"unable to marshal CustomMarshalUsersBornOnUser.Birthdate: %w", err)
 		}
 	}
 	return &retval, nil
@@ -137,7 +137,7 @@ func (v *__CustomMarshalInput) UnmarshalJSON(b []byte) error {
 				src, dst)
 			if err != nil {
 				return fmt.Errorf(
-					"Unable to unmarshal __CustomMarshalInput.Date: %w", err)
+					"unable to unmarshal __CustomMarshalInput.Date: %w", err)
 			}
 		}
 	}
@@ -168,7 +168,7 @@ func (v *__CustomMarshalInput) __premarshalJSON() (*__premarshal__CustomMarshalI
 			&src)
 		if err != nil {
 			return nil, fmt.Errorf(
-				"Unable to marshal __CustomMarshalInput.Date: %w", err)
+				"unable to marshal __CustomMarshalInput.Date: %w", err)
 		}
 	}
 	return &retval, nil
@@ -178,16 +178,9 @@ func CustomMarshal(
 	client graphql.Client,
 	date time.Time,
 ) (*CustomMarshalResponse, error) {
-	__input := __CustomMarshalInput{
-		Date: date,
-	}
-	var err error
-
-	var retval CustomMarshalResponse
-	err = client.MakeRequest(
-		nil,
-		"CustomMarshal",
-		`
+	req := &graphql.Request{
+		OpName: "CustomMarshal",
+		Query: `
 query CustomMarshal ($date: Date!) {
 	usersBornOn(date: $date) {
 		id
@@ -195,9 +188,21 @@ query CustomMarshal ($date: Date!) {
 	}
 }
 `,
-		&retval,
-		&__input,
+		Variables: &__CustomMarshalInput{
+			Date: date,
+		},
+	}
+	var err error
+
+	var data CustomMarshalResponse
+	resp := &graphql.Response{Data: &data}
+
+	err = client.MakeRequest(
+		nil,
+		req,
+		resp,
 	)
-	return &retval, err
+
+	return &data, err
 }
 

@@ -224,14 +224,33 @@ func (g *generator) preprocessQueryDocument(doc *ast.QueryDocument) {
 	validator.Walk(g.schema, doc, &observers)
 }
 
+// validateOperation checks for a few classes of operations that gqlparser
+// considers valid but we don't allow, and returns an error if this operation
+// is invalid for genqlient's purposes.
+func (g *generator) validateOperation(op *ast.OperationDefinition) error {
+	_, err := g.baseTypeForOperation(op.Operation)
+	if err != nil {
+		// (e.g. operation has subscriptions, which we don't support)
+		return err
+	}
+
+	if op.Name == "" {
+		return errorf(op.Position, "operations must have operation-names")
+	} else if goKeywords[op.Name] {
+		return errorf(op.Position, "operation name must not be a go keyword")
+	}
+
+	return nil
+}
+
 // addOperation adds to g.Operations the information needed to generate a
 // genqlient entrypoint function for the given operation.  It also adds to
 // g.typeMap any types referenced by the operation, except for types belonging
 // to named fragments, which are added separately by Generate via
 // convertFragment.
 func (g *generator) addOperation(op *ast.OperationDefinition) error {
-	if op.Name == "" {
-		return errorf(op.Position, "operations must have operation-names")
+	if err := g.validateOperation(op); err != nil {
+		return err
 	}
 
 	queryDoc := &ast.QueryDocument{
@@ -294,9 +313,9 @@ func (g *generator) addOperation(op *ast.OperationDefinition) error {
 // Generate is the main programmatic entrypoint to genqlient, and generates and
 // returns Go source code based on the given configuration.
 //
-// See Config for more on creating a configuration.  The return value is a map
-// from filename to the generated file-content (e.g. Go source).  Callers who
-// don't want to manage reading and writing the files should call Main.
+// See [Config] for more on creating a configuration.  The return value is a
+// map from filename to the generated file-content (e.g. Go source).  Callers
+// who don't want to manage reading and writing the files should call [Main].
 func Generate(config *Config) (map[string][]byte, error) {
 	// Step 1: Read in the schema and operations from the files defined by the
 	// config (and validate the operations against the schema).  This is all

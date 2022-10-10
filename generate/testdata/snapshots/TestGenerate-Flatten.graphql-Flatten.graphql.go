@@ -202,7 +202,7 @@ func (v *InnerQueryFragment) UnmarshalJSON(b []byte) error {
 				src, dst)
 			if err != nil {
 				return fmt.Errorf(
-					"Unable to unmarshal InnerQueryFragment.RandomItem: %w", err)
+					"unable to unmarshal InnerQueryFragment.RandomItem: %w", err)
 			}
 		}
 	}
@@ -238,7 +238,7 @@ func (v *InnerQueryFragment) __premarshalJSON() (*__premarshalInnerQueryFragment
 			&src)
 		if err != nil {
 			return nil, fmt.Errorf(
-				"Unable to marshal InnerQueryFragment.RandomItem: %w", err)
+				"unable to marshal InnerQueryFragment.RandomItem: %w", err)
 		}
 	}
 	retval.OtherVideo = v.OtherVideo
@@ -269,13 +269,9 @@ func (v *VideoFieldsParentTopic) GetVideoChildren() []ChildVideoFields { return 
 func ComplexNamedFragments(
 	client graphql.Client,
 ) (*InnerQueryFragment, error) {
-	var err error
-
-	var retval InnerQueryFragment
-	err = client.MakeRequest(
-		nil,
-		"ComplexNamedFragments",
-		`
+	req := &graphql.Request{
+		OpName: "ComplexNamedFragments",
+		Query: `
 query ComplexNamedFragments {
 	... QueryFragment
 }
@@ -311,9 +307,18 @@ fragment ChildVideoFields on Video {
 	name
 }
 `,
-		&retval,
+	}
+	var err error
+
+	var data InnerQueryFragment
+	resp := &graphql.Response{Data: &data}
+
+	err = client.MakeRequest(
 		nil,
+		req,
+		resp,
 	)
-	return &retval, err
+
+	return &data, err
 }
 

@@ -140,7 +140,7 @@ func (v *UserQueryInput) UnmarshalJSON(b []byte) error {
 				src, dst)
 			if err != nil {
 				return fmt.Errorf(
-					"Unable to unmarshal UserQueryInput.Birthdate: %w", err)
+					"unable to unmarshal UserQueryInput.Birthdate: %w", err)
 			}
 		}
 	}
@@ -189,7 +189,7 @@ func (v *UserQueryInput) __premarshalJSON() (*__premarshalUserQueryInput, error)
 			&src)
 		if err != nil {
 			return nil, fmt.Errorf(
-				"Unable to marshal UserQueryInput.Birthdate: %w", err)
+				"unable to marshal UserQueryInput.Birthdate: %w", err)
 		}
 	}
 	return &retval, nil
@@ -227,20 +227,9 @@ func OmitEmptyQuery(
 	tz string,
 	tzNoOmitEmpty string,
 ) (*OmitEmptyQueryResponse, error) {
-	__input := __OmitEmptyQueryInput{
-		Query:         query,
-		Queries:       queries,
-		Dt:            dt,
-		Tz:            tz,
-		TzNoOmitEmpty: tzNoOmitEmpty,
-	}
-	var err error
-
-	var retval OmitEmptyQueryResponse
-	err = client.MakeRequest(
-		nil,
-		"OmitEmptyQuery",
-		`
+	req := &graphql.Request{
+		OpName: "OmitEmptyQuery",
+		Query: `
 query OmitEmptyQuery ($query: UserQueryInput, $queries: [UserQueryInput], $dt: DateTime, $tz: String, $tzNoOmitEmpty: String) {
 	user(query: $query) {
 		id
@@ -252,9 +241,25 @@ query OmitEmptyQuery ($query: UserQueryInput, $queries: [UserQueryInput], $dt: D
 	convert2: maybeConvert(dt: $dt, tz: $tzNoOmitEmpty)
 }
 `,
-		&retval,
-		&__input,
+		Variables: &__OmitEmptyQueryInput{
+			Query:         query,
+			Queries:       queries,
+			Dt:            dt,
+			Tz:            tz,
+			TzNoOmitEmpty: tzNoOmitEmpty,
+		},
+	}
+	var err error
+
+	var data OmitEmptyQueryResponse
+	resp := &graphql.Response{Data: &data}
+
+	err = client.MakeRequest(
+		nil,
+		req,
+		resp,
 	)
-	return &retval, err
+
+	return &data, err
 }
 

@@ -75,7 +75,7 @@ func (v *MyInput) UnmarshalJSON(b []byte) error {
 				src, *dst)
 			if err != nil {
 				return fmt.Errorf(
-					"Unable to unmarshal MyInput.Birthdate: %w", err)
+					"unable to unmarshal MyInput.Birthdate: %w", err)
 			}
 		}
 	}
@@ -125,7 +125,7 @@ func (v *MyInput) __premarshalJSON() (*__premarshalMyInput, error) {
 				src)
 			if err != nil {
 				return nil, fmt.Errorf(
-					"Unable to marshal MyInput.Birthdate: %w", err)
+					"unable to marshal MyInput.Birthdate: %w", err)
 			}
 		}
 	}
@@ -256,7 +256,7 @@ func (v *UserQueryInput) UnmarshalJSON(b []byte) error {
 				src, *dst)
 			if err != nil {
 				return fmt.Errorf(
-					"Unable to unmarshal UserQueryInput.Birthdate: %w", err)
+					"unable to unmarshal UserQueryInput.Birthdate: %w", err)
 			}
 		}
 	}
@@ -306,7 +306,7 @@ func (v *UserQueryInput) __premarshalJSON() (*__premarshalUserQueryInput, error)
 				src)
 			if err != nil {
 				return nil, fmt.Errorf(
-					"Unable to marshal UserQueryInput.Birthdate: %w", err)
+					"unable to marshal UserQueryInput.Birthdate: %w", err)
 			}
 		}
 	}
@@ -330,17 +330,9 @@ func MultipleDirectives(
 	query MyInput,
 	queries []*UserQueryInput,
 ) (*MyMultipleDirectivesResponse, error) {
-	__input := __MultipleDirectivesInput{
-		Query:   query,
-		Queries: queries,
-	}
-	var err error
-
-	var retval MyMultipleDirectivesResponse
-	err = client.MakeRequest(
-		nil,
-		"MultipleDirectives",
-		`
+	req := &graphql.Request{
+		OpName: "MultipleDirectives",
+		Query: `
 query MultipleDirectives ($query: UserQueryInput, $queries: [UserQueryInput]) {
 	user(query: $query) {
 		id
@@ -350,9 +342,22 @@ query MultipleDirectives ($query: UserQueryInput, $queries: [UserQueryInput]) {
 	}
 }
 `,
-		&retval,
-		&__input,
+		Variables: &__MultipleDirectivesInput{
+			Query:   query,
+			Queries: queries,
+		},
+	}
+	var err error
+
+	var data MyMultipleDirectivesResponse
+	resp := &graphql.Response{Data: &data}
+
+	err = client.MakeRequest(
+		nil,
+		req,
+		resp,
 	)
-	return &retval, err
+
+	return &data, err
 }
 

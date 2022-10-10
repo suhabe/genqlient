@@ -87,6 +87,31 @@ client_getter: "github.com/you/yourpkg.GetClient"
 # Defaults to false.
 use_struct_references: boolean
 
+# If set, generated code will have a third return parameter of type 
+# map[string]interface{}. This will contain the optional values
+# of the Extensions field send from Servers.
+# ref.: https://spec.graphql.org/October2021/#sec-Response-Format
+#
+# This can be useful for extending the GraphQL Protocol.
+#
+# Defaults to false.
+use_extensions: boolean
+
+# Customize how optional fields are handled.
+optional:
+  # Customize how models are generated for optional fields. This can currently
+  # be set to one of the following values:
+  # - value (default): optional fields are generated as values, the same as
+  #   non-optional fields. E.g. fields with GraphQL types `String` or `String!`
+  #   will both map to the Go type `string`. When values are absent in
+  #   responses the zero value will be used.
+  # - pointer: optional fields are generated as pointers. E.g. fields with
+  #   GraphQL type `String` will map to the Go type `*string`. When values are
+  #   absent in responses `nil` will be used. Optional list fields do not use
+  #   pointers-to-slices, so the GraphQL type `[String]` will map to the Go
+  #   type `[]*string`, not `*[]*string`; GraphQL null and empty list simply
+  #   map to Go nil- and empty-slice.
+  output: value
 
 # A map from GraphQL type name to Go fully-qualified type name to override
 # the Go type genqlient will use for this GraphQL type.
@@ -183,3 +208,13 @@ bindings:
     # certain fields but others are optional.
     expect_exact_fields: "{ id name }"
     # unmarshaler and marshaler are also valid here, see above for details.
+
+# A list of packages for which genqlient should automatically generate
+# bindings.  This is equivalent to adding a entry
+#   TypeName:
+#       type: github.com/you/yourpkg/models.TypeName
+# to the bindings map, above, for each exported type in the package.  Multiple
+# packages may be specified, and later ones take precedence over earlier ones.
+# Explicit entries in bindings take precedence over all package bindings.
+package_bindings:
+- package: github.com/you/yourpkg/models

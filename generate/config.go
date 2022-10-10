@@ -1,12 +1,14 @@
 package generate
 
 import (
+	_ "embed"
+	"fmt"
 	"go/token"
-	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
+	"golang.org/x/tools/go/packages"
 	"gopkg.in/yaml.v2"
 )
 
@@ -15,10 +17,11 @@ var cfgFilenames = []string{".genqlient.yml", ".genqlient.yaml", "genqlient.yml"
 // Config represents genqlient's configuration, generally read from
 // genqlient.yaml.
 //
-// Callers must call ValidateAndFillDefaults before using the config.
+// Callers must call [Config.ValidateAndFillDefaults] before using the config.
 type Config struct {
-	// The following fields are documented at:
-	// https://github.com/suhabe/genqlient/blob/main/docs/genqlient.yaml
+	// The following fields are documented in the [genqlient.yaml docs].
+	//
+	// [genqlient.yaml docs]: https://github.com/suhabe/genqlient/blob/main/docs/genqlient.yaml
 	Schema           StringList              `yaml:"schema"`
 	Operations       StringList              `yaml:"operations"`
 	Generated        string                  `yaml:"generated"`
@@ -27,7 +30,10 @@ type Config struct {
 	ContextType      string                  `yaml:"context_type"`
 	ClientGetter     string                  `yaml:"client_getter"`
 	Bindings         map[string]*TypeBinding `yaml:"bindings"`
+	PackageBindings  []*PackageBinding       `yaml:"package_bindings"`
+	Optional         string                  `yaml:"optional"`
 	StructReferences bool                    `yaml:"use_struct_references"`
+	Extensions       bool                    `yaml:"use_extensions"`
 
 	// Set to true to use features that aren't fully ready to use.
 	//
@@ -42,13 +48,33 @@ type Config struct {
 }
 
 // A TypeBinding represents a Go type to which genqlient will bind a particular
-// GraphQL type, and is documented further at:
-// https://github.com/suhabe/genqlient/blob/main/docs/genqlient.yaml
+// GraphQL type, and is documented further in the [genqlient.yaml docs].
+//
+// [genqlient.yaml docs]: https://github.com/suhabe/genqlient/blob/main/docs/genqlient.yaml
 type TypeBinding struct {
 	Type              string `yaml:"type"`
 	ExpectExactFields string `yaml:"expect_exact_fields"`
 	Marshaler         string `yaml:"marshaler"`
 	Unmarshaler       string `yaml:"unmarshaler"`
+}
+
+// A PackageBinding represents a Go package for which genqlient will
+// automatically generate [TypeBinding] values, and is documented further in
+// the [genqlient.yaml docs].
+//
+// [genqlient.yaml docs]: https://github.com/Khan/genqlient/blob/main/docs/genqlient.yaml
+type PackageBinding struct {
+	Package string `yaml:"package"`
+}
+
+// pathJoin is like filepath.Join but 1) it only takes two argsuments,
+// and b) if the second argument is an absolute path the first argument
+// is ignored (similar to how python's os.path.join() works).
+func pathJoin(a, b string) string {
+	if filepath.IsAbs(b) {
+		return b
+	}
+	return filepath.Join(a, b)
 }
 
 // ValidateAndFillDefaults ensures that the configuration is valid, and fills
@@ -59,14 +85,14 @@ type TypeBinding struct {
 func (c *Config) ValidateAndFillDefaults(baseDir string) error {
 	c.baseDir = baseDir
 	for i := range c.Schema {
-		c.Schema[i] = filepath.Join(baseDir, c.Schema[i])
+		c.Schema[i] = pathJoin(baseDir, c.Schema[i])
 	}
 	for i := range c.Operations {
-		c.Operations[i] = filepath.Join(baseDir, c.Operations[i])
+		c.Operations[i] = pathJoin(baseDir, c.Operations[i])
 	}
-	c.Generated = filepath.Join(baseDir, c.Generated)
+	c.Generated = pathJoin(baseDir, c.Generated)
 	if c.ExportOperations != "" {
-		c.ExportOperations = filepath.Join(baseDir, c.ExportOperations)
+		c.ExportOperations = pathJoin(baseDir, c.ExportOperations)
 	}
 
 	if c.ContextType == "" {
@@ -87,13 +113,57 @@ func (c *Config) ValidateAndFillDefaults(baseDir string) error {
 		c.Package = base
 	}
 
+	if len(c.PackageBindings) > 0 {
+		for _, binding := range c.PackageBindings {
+			if strings.HasSuffix(binding.Package, ".go") {
+				// total heuristic -- but this is an easy mistake to make and
+				// results in rather bizarre behavior from go/packages.
+				return errorf(nil,
+					"package %v looks like a file, but should be a package-name",
+					binding.Package)
+			}
+
+			mode := packages.NeedImports | packages.NeedTypes | packages.NeedTypesSizes
+			pkgs, err := packages.Load(&packages.Config{
+				Mode: mode,
+			}, binding.Package)
+			if err != nil {
+				return err
+			}
+
+			if c.Bindings == nil {
+				c.Bindings = map[string]*TypeBinding{}
+			}
+
+			for _, pkg := range pkgs {
+				p := pkg.Types
+				if p == nil || p.Scope() == nil {
+					return errorf(nil, "unable to bind package %s: no types found", binding.Package)
+				}
+
+				for _, typ := range p.Scope().Names() {
+					if token.IsExported(typ) {
+						// Check if type is manual bindings
+						_, exist := c.Bindings[typ]
+						if !exist {
+							pathType := fmt.Sprintf("%s.%s", p.Path(), typ)
+							c.Bindings[typ] = &TypeBinding{
+								Type: pathType,
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
 	return nil
 }
 
 // ReadAndValidateConfig reads the configuration from the given file, validates
 // it, and returns it.
 func ReadAndValidateConfig(filename string) (*Config, error) {
-	text, err := ioutil.ReadFile(filename)
+	text, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, errorf(nil, "unreadable config file %v: %v", filename, err)
 	}
@@ -123,22 +193,11 @@ func ReadAndValidateConfigFromDefaultLocations() (*Config, error) {
 	return ReadAndValidateConfig(cfgFile)
 }
 
+//go:embed default_genqlient.yaml
+var defaultConfig []byte
+
 func initConfig(filename string) error {
-	// TODO(benkraft): Embed this config file into the binary, see
-	// https://github.com/suhabe/genqlient/issues/9.
-	r, err := os.Open(filepath.Join(thisDir, "default_genqlient.yaml"))
-	if err != nil {
-		return err
-	}
-	w, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
-	if err != nil {
-		return errorf(nil, "unable to write default genqlient.yaml: %v", err)
-	}
-	_, err = io.Copy(w, r)
-	if err != nil {
-		return errorf(nil, "unable to write default genqlient.yaml: %v", err)
-	}
-	return nil
+	return os.WriteFile(filename, defaultConfig, 0o644)
 }
 
 // findCfg searches for the config file in this directory and all parents up the tree
@@ -165,7 +224,7 @@ func findCfg() (string, error) {
 
 func findCfgInDir(dir string) string {
 	for _, cfgName := range cfgFilenames {
-		path := filepath.Join(dir, cfgName)
+		path := pathJoin(dir, cfgName)
 		if _, err := os.Stat(path); err == nil {
 			return path
 		}

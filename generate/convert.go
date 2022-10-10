@@ -11,6 +11,7 @@ package generate
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/vektah/gqlparser/v2/ast"
 )
@@ -164,6 +165,10 @@ func (g *generator) convertArguments(
 	name := "__" + operation.Name + "Input"
 	fields := make([]*goStructField, len(operation.VariableDefinitions))
 	for i, arg := range operation.VariableDefinitions {
+		if goKeywords[arg.Variable] {
+			return nil, errorf(arg.Position, "variable name must not be a go keyword")
+		}
+
 		_, options, err := g.parsePrecedingComment(arg, nil, arg.Position, queryOptions)
 		if err != nil {
 			return nil, err
@@ -252,7 +257,7 @@ func (g *generator) convertType(
 			oe := true
 			options.Omitempty = &oe
 		}
-	} else if options.GetPointer() {
+	} else if options.GetPointer() || (!typ.NonNull && g.Config.Optional == "pointer") {
 		// Whatever we get, wrap it in a pointer.  (Because of the way the
 		// options work, recursing here isn't as connvenient.)
 		// Note this does []*T or [][]*T, not e.g. *[][]T.  See #16.
@@ -289,6 +294,12 @@ func (g *generator) convertDefinition(
 	// unless the binding is "-" which means "ignore the global binding".
 	globalBinding, ok := g.Config.Bindings[def.Name]
 	if ok && options.Bind != "-" {
+		if options.TypeName != "" {
+			// The option position (in the query) is more useful here.
+			return nil, errorf(options.pos,
+				"typename option conflicts with global binding for %s; "+
+					"use `bind: \"-\"` to override it", def.Name)
+		}
 		if def.Kind == ast.Object || def.Kind == ast.Interface || def.Kind == ast.Union {
 			err := g.validateBindingSelection(
 				def.Name, globalBinding, pos, selectionSet)
@@ -312,6 +323,9 @@ func (g *generator) convertDefinition(
 	// Determine the name to use for this type.
 	var name string
 	if options.TypeName != "" {
+		if goKeywords[options.TypeName] {
+			return nil, errorf(pos, "typename option must not be a go keyword")
+		}
 		// If the user specified a name, use it!
 		name = options.TypeName
 		if namePrefix != nil && namePrefix.head == name && namePrefix.tail == nil {
@@ -410,12 +424,12 @@ func (g *generator) convertDefinition(
 			goName := upperFirst(field.Name)
 			// Several of the arguments don't really make sense here:
 			// (note field.Type is necessarily a scalar, input, or enum)
-			// - namePrefix is ignored for input types and enums (see
-			//   names.go) and for scalars (they use client-specified
-			//   names)
-			// - selectionSet is ignored for input types, because we
-			//   just use all fields of the type; and it's nonexistent
-			//   for scalars and enums, our only other possible types
+			//  - namePrefix is ignored for input types and enums (see
+			//    names.go) and for scalars (they use client-specified
+			//    names)
+			//  - selectionSet is ignored for input types, because we
+			//    just use all fields of the type; and it's nonexistent
+			//    for scalars and enums, our only other possible types
 			// TODO(benkraft): Can we refactor to avoid passing the values that
 			// will be ignored?  We know field.Type is a scalar, enum, or input
 			// type.  But plumbing that is a bit tricky in practice.
@@ -452,6 +466,8 @@ func (g *generator) convertDefinition(
 		}
 
 		implementationTypes := g.schema.GetPossibleTypes(def)
+		// Make sure we generate stable output by sorting the types by name when we get them
+		sort.Slice(implementationTypes, func(i, j int) bool { return implementationTypes[i].Name < implementationTypes[j].Name })
 		goType := &goInterfaceType{
 			GoName:          name,
 			SharedFields:    sharedFields,
@@ -634,12 +650,14 @@ func (g *generator) convertSelectionSet(
 // of the given type", which is true when the given type is or implements
 // the fragment's type.  This is distinct from the rules for when a fragment
 // spread is legal, which is true when the fragment would be active for *any*
-// of the concrete types the spread-context could have (see
-// https://spec.graphql.org/draft/#sec-Fragment-Spreads or docs/DESIGN.md).
+// of the concrete types the spread-context could have (see the [GraphQL spec]
+// or docs/DESIGN.md).
 //
 // containingTypedef is as described in convertInlineFragment, below.
 // fragmentTypedef is the definition of the fragment's type-condition, i.e. the
 // definition of MyType in a fragment `on MyType`.
+//
+// [GraphQL spec]: https://spec.graphql.org/draft/#sec-Fragment-Spreads
 func fragmentMatches(containingTypedef, fragmentTypedef *ast.Definition) bool {
 	if containingTypedef.Name == fragmentTypedef.Name {
 		return true
@@ -647,10 +665,11 @@ func fragmentMatches(containingTypedef, fragmentTypedef *ast.Definition) bool {
 	for _, iface := range containingTypedef.Interfaces {
 		// Note we don't need to recurse into the interfaces here, because in
 		// GraphQL types must list all the interfaces they implement, including
-		// all types those interfaces implement [1].  Actually, at present
+		// all types those interfaces implement ([spec]).  Actually, at present
 		// gqlparser doesn't even support interfaces implementing other
 		// interfaces, but our code would handle that too.
-		// [1] https://spec.graphql.org/draft/#sec-Interfaces.Interfaces-Implementing-Interfaces
+		//
+		// [spec]: https://spec.graphql.org/draft/#sec-Interfaces.Interfaces-Implementing-Interfaces
 		if iface == fragmentTypedef.Name {
 			return true
 		}

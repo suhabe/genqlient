@@ -1,8 +1,8 @@
 package generate
 
 import (
+	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -24,7 +24,7 @@ const (
 func buildGoFile(namePrefix string, content []byte) error {
 	// We need to put this within the current module, rather than in
 	// /tmp, so that it can access internal/testutil.
-	f, err := ioutil.TempFile("./testdata/tmp", namePrefix+"_*.go")
+	f, err := os.CreateTemp("./testdata/tmp", namePrefix+"_*.go")
 	if err != nil {
 		return err
 	}
@@ -61,7 +61,7 @@ func buildGoFile(namePrefix string, content []byte) error {
 // update the snapshots.  Make sure to check that the output is sensible; the
 // snapshots don't even get compiled!
 func TestGenerate(t *testing.T) {
-	files, err := ioutil.ReadDir(dataDir)
+	files, err := os.ReadDir(dataDir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -124,11 +124,11 @@ func TestGenerate(t *testing.T) {
 	}
 }
 
-func defaultConfig(t *testing.T) *Config {
+func getDefaultConfig(t *testing.T) *Config {
 	// Parse the config that `genqlient --init` generates, to make sure that
 	// works.
 	var config Config
-	b, err := ioutil.ReadFile("default_genqlient.yaml")
+	b, err := os.ReadFile("default_genqlient.yaml")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -147,50 +147,68 @@ func defaultConfig(t *testing.T) *Config {
 // configurations.  It uses snapshots, just like TestGenerate.
 func TestGenerateWithConfig(t *testing.T) {
 	tests := []struct {
-		name    string
-		baseDir string  // relative to dataDir
-		config  *Config // omits Schema and Operations, set below.
+		name       string
+		baseDir    string   // relative to dataDir
+		operations []string // overrides the default set below
+		config     *Config  // omits Schema and Operations, set below.
 	}{
-		{"DefaultConfig", "", defaultConfig(t)},
-		{"Subpackage", "", &Config{
+		{"DefaultConfig", "", nil, getDefaultConfig(t)},
+		{"Subpackage", "", nil, &Config{
 			Generated: "mypkg/myfile.go",
 		}},
-		{"SubpackageConfig", "mypkg", &Config{
+		{"SubpackageConfig", "mypkg", nil, &Config{
 			Generated: "myfile.go", // (relative to genqlient.yaml)
 		}},
-		{"PackageName", "", &Config{
+		{"PackageName", "", nil, &Config{
 			Generated: "myfile.go",
 			Package:   "mypkg",
 		}},
-		{"ExportOperations", "", &Config{
+		{"ExportOperations", "", nil, &Config{
 			Generated:        "generated.go",
 			ExportOperations: "operations.json",
 		}},
-		{"CustomContext", "", &Config{
+		{"CustomContext", "", nil, &Config{
 			Generated:   "generated.go",
 			ContextType: "github.com/suhabe/genqlient/internal/testutil.MyContext",
 		}},
-		{"StructReferences", "", &Config{
+		{"StructReferences", "", nil, &Config{
 			StructReferences: true,
 			Generated:        "generated-structrefs.go",
 		}},
-		{"NoContext", "", &Config{
+		{"PackageBindings", "", nil, &Config{
+			PackageBindings: []*PackageBinding{
+				{Package: "github.com/Khan/genqlient/internal/testutil"},
+			},
+		}},
+		{"NoContext", "", nil, &Config{
 			Generated:   "generated.go",
 			ContextType: "-",
 		}},
-		{"ClientGetter", "", &Config{
+		{"ClientGetter", "", nil, &Config{
 			Generated:    "generated.go",
 			ClientGetter: "github.com/suhabe/genqlient/internal/testutil.GetClientFromContext",
 		}},
-		{"ClientGetterCustomContext", "", &Config{
+		{"ClientGetterCustomContext", "", nil, &Config{
 			Generated:    "generated.go",
 			ClientGetter: "github.com/suhabe/genqlient/internal/testutil.GetClientFromMyContext",
 			ContextType:  "github.com/suhabe/genqlient/internal/testutil.MyContext",
 		}},
-		{"ClientGetterNoContext", "", &Config{
+		{"ClientGetterNoContext", "", nil, &Config{
 			Generated:    "generated.go",
 			ClientGetter: "github.com/suhabe/genqlient/internal/testutil.GetClientFromNowhere",
 			ContextType:  "-",
+		}},
+		{"Extensions", "", nil, &Config{
+			Generated:  "generated.go",
+			Extensions: true,
+		}},
+		{"OptionalValue", "", []string{"ListInput.graphql", "QueryWithSlices.graphql"}, &Config{
+			Generated: "generated.go",
+			Optional:  "value",
+		}},
+		{"OptionalPointer", "", []string{"ListInput.graphql", "QueryWithSlices.graphql"}, &Config{
+			Generated: "generated.go",
+			Optional:  "pointer",
 		}},
 	}
 
@@ -202,7 +220,14 @@ func TestGenerateWithConfig(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			err := config.ValidateAndFillDefaults(baseDir)
 			config.Schema = []string{filepath.Join(dataDir, "schema.graphql")}
-			config.Operations = []string{filepath.Join(dataDir, sourceFilename)}
+			if test.operations == nil {
+				config.Operations = []string{filepath.Join(dataDir, sourceFilename)}
+			} else {
+				config.Operations = make([]string, len(test.operations))
+				for i := range test.operations {
+					config.Operations[i] = filepath.Join(dataDir, test.operations[i])
+				}
+			}
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -232,16 +257,17 @@ func TestGenerateWithConfig(t *testing.T) {
 	}
 }
 
-// TestGenerate is a snapshot-based test of error text.
+// TestGenerateErrors is a snapshot-based test of error text.
 //
-// For each .go or .graphql file in testdata/errors, and corresponding
-// .schema.graphql file, it asserts that the given query returns an error, and
-// that that error's string-text matches the snapshot.  The snapshotting is
-// useful to ensure we don't accidentally make the text less readable, drop the
-// line numbers, etc.  We include both .go and .graphql tests, to make sure the
-// line numbers work in both cases.
+// For each .go or .graphql file in testdata/errors, it asserts that the given
+// query returns an error, and that that error's string-text matches the
+// snapshot.  The snapshotting is useful to ensure we don't accidentally make
+// the text less readable, drop the line numbers, etc.  We include both .go and
+// .graphql tests for some of the test cases, to make sure the line numbers
+// work in both cases.  Tests may include a .schema.graphql file of their own,
+// or use the shared schema.graphql in the same directory for convenience.
 func TestGenerateErrors(t *testing.T) {
-	files, err := ioutil.ReadDir(errorsDir)
+	files, err := os.ReadDir(errorsDir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -250,13 +276,24 @@ func TestGenerateErrors(t *testing.T) {
 		sourceFilename := file.Name()
 		if !strings.HasSuffix(sourceFilename, ".graphql") &&
 			!strings.HasSuffix(sourceFilename, ".go") ||
-			strings.HasSuffix(sourceFilename, ".schema.graphql") {
+			strings.HasSuffix(sourceFilename, ".schema.graphql") ||
+			sourceFilename == "schema.graphql" {
 			continue
 		}
 
 		baseFilename := strings.TrimSuffix(sourceFilename, filepath.Ext(sourceFilename))
-		schemaFilename := baseFilename + ".schema.graphql"
 		testFilename := strings.ReplaceAll(sourceFilename, ".", "/")
+
+		// Schema is either <base>.schema.graphql, or <dir>/schema.graphql if
+		// that doesn't exist.
+		schemaFilename := baseFilename + ".schema.graphql"
+		if _, err := os.Stat(filepath.Join(errorsDir, schemaFilename)); err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				schemaFilename = "schema.graphql"
+			} else {
+				t.Fatal(err)
+			}
+		}
 
 		t.Run(testFilename, func(t *testing.T) {
 			_, err := Generate(&Config{

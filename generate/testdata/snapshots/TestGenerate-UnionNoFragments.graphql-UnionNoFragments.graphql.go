@@ -137,7 +137,7 @@ func (v *UnionNoFragmentsQueryResponse) UnmarshalJSON(b []byte) error {
 				src, dst)
 			if err != nil {
 				return fmt.Errorf(
-					"Unable to unmarshal UnionNoFragmentsQueryResponse.RandomLeaf: %w", err)
+					"unable to unmarshal UnionNoFragmentsQueryResponse.RandomLeaf: %w", err)
 			}
 		}
 	}
@@ -168,7 +168,7 @@ func (v *UnionNoFragmentsQueryResponse) __premarshalJSON() (*__premarshalUnionNo
 			&src)
 		if err != nil {
 			return nil, fmt.Errorf(
-				"Unable to marshal UnionNoFragmentsQueryResponse.RandomLeaf: %w", err)
+				"unable to marshal UnionNoFragmentsQueryResponse.RandomLeaf: %w", err)
 		}
 	}
 	return &retval, nil
@@ -177,22 +177,27 @@ func (v *UnionNoFragmentsQueryResponse) __premarshalJSON() (*__premarshalUnionNo
 func UnionNoFragmentsQuery(
 	client graphql.Client,
 ) (*UnionNoFragmentsQueryResponse, error) {
-	var err error
-
-	var retval UnionNoFragmentsQueryResponse
-	err = client.MakeRequest(
-		nil,
-		"UnionNoFragmentsQuery",
-		`
+	req := &graphql.Request{
+		OpName: "UnionNoFragmentsQuery",
+		Query: `
 query UnionNoFragmentsQuery {
 	randomLeaf {
 		__typename
 	}
 }
 `,
-		&retval,
+	}
+	var err error
+
+	var data UnionNoFragmentsQueryResponse
+	resp := &graphql.Response{Data: &data}
+
+	err = client.MakeRequest(
 		nil,
+		req,
+		resp,
 	)
-	return &retval, err
+
+	return &data, err
 }
 

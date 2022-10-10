@@ -79,7 +79,7 @@ func (v *__CustomMarshalSliceInput) UnmarshalJSON(b []byte) error {
 							src, dst)
 						if err != nil {
 							return fmt.Errorf(
-								"Unable to unmarshal __CustomMarshalSliceInput.Datesss: %w", err)
+								"unable to unmarshal __CustomMarshalSliceInput.Datesss: %w", err)
 						}
 					}
 				}
@@ -111,7 +111,7 @@ func (v *__CustomMarshalSliceInput) UnmarshalJSON(b []byte) error {
 							src, *dst)
 						if err != nil {
 							return fmt.Errorf(
-								"Unable to unmarshal __CustomMarshalSliceInput.Datesssp: %w", err)
+								"unable to unmarshal __CustomMarshalSliceInput.Datesssp: %w", err)
 						}
 					}
 				}
@@ -162,7 +162,7 @@ func (v *__CustomMarshalSliceInput) __premarshalJSON() (*__premarshal__CustomMar
 						&src)
 					if err != nil {
 						return nil, fmt.Errorf(
-							"Unable to marshal __CustomMarshalSliceInput.Datesss: %w", err)
+							"unable to marshal __CustomMarshalSliceInput.Datesss: %w", err)
 					}
 				}
 			}
@@ -193,7 +193,7 @@ func (v *__CustomMarshalSliceInput) __premarshalJSON() (*__premarshal__CustomMar
 							src)
 						if err != nil {
 							return nil, fmt.Errorf(
-								"Unable to marshal __CustomMarshalSliceInput.Datesssp: %w", err)
+								"unable to marshal __CustomMarshalSliceInput.Datesssp: %w", err)
 						}
 					}
 				}
@@ -208,25 +208,30 @@ func CustomMarshalSlice(
 	datesss [][][]time.Time,
 	datesssp [][][]*time.Time,
 ) (*CustomMarshalSliceResponse, error) {
-	__input := __CustomMarshalSliceInput{
-		Datesss:  datesss,
-		Datesssp: datesssp,
-	}
-	var err error
-
-	var retval CustomMarshalSliceResponse
-	err = client.MakeRequest(
-		nil,
-		"CustomMarshalSlice",
-		`
+	req := &graphql.Request{
+		OpName: "CustomMarshalSlice",
+		Query: `
 query CustomMarshalSlice ($datesss: [[[Date!]!]!]!, $datesssp: [[[Date!]!]!]!) {
 	acceptsListOfListOfListsOfDates(datesss: $datesss)
 	withPointer: acceptsListOfListOfListsOfDates(datesss: $datesssp)
 }
 `,
-		&retval,
-		&__input,
+		Variables: &__CustomMarshalSliceInput{
+			Datesss:  datesss,
+			Datesssp: datesssp,
+		},
+	}
+	var err error
+
+	var data CustomMarshalSliceResponse
+	resp := &graphql.Response{Data: &data}
+
+	err = client.MakeRequest(
+		nil,
+		req,
+		resp,
 	)
-	return &retval, err
+
+	return &data, err
 }
 
