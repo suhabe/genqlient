@@ -34,6 +34,7 @@ type Config struct {
 	Optional         string                  `yaml:"optional"`
 	StructReferences bool                    `yaml:"use_struct_references"`
 	Extensions       bool                    `yaml:"use_extensions"`
+	LogTiming        bool                    `yaml:"log_timing"`
 
 	// Set to true to use features that aren't fully ready to use.
 	//

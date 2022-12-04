@@ -33,6 +33,19 @@ func {{.Name}}(
         return nil, {{if .Config.Extensions -}}nil,{{end -}} err
     }
     {{end}}
+
+    {{if .Config.LogTiming -}}
+    start := time.Now()
+    requestPayload, err := json.Marshal(req.Variables)
+    if err != nil {
+        return nil, err
+    }
+    marshalTime := time.Since(start)
+    defer func() {
+        fmt.Printf("[%v] %s (%d bytes) took %v (%v marshaling)\n", time.Now().Format("2006-01-02 15:04:05Z07:00"), "{{.Name}}", len(requestPayload), time.Since(start), marshalTime)
+    }()
+    {{end -}}
+
     var data {{.ResponseName}}
     resp := &graphql.Response{Data: &data}
 
