@@ -35,7 +35,6 @@ func {{.Name}}(
     {{end}}
 
     {{if .Config.LogTiming -}}
-    if logTiming := ctx.Value(n.Auth0NamespaceContextVar); logTiming != nil {
     start := time.Now()
     requestPayload, err := json.Marshal(req.Variables)
     if err != nil {
