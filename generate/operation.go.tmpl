@@ -40,10 +40,7 @@ func {{.Name}}(
     if err != nil {
         return nil, err
     }
-    marshalTime := time.Since(start)
-    defer func() {
-        fmt.Printf("[%v] %s (%d bytes) took %v (%v marshaling)\n", time.Now().Format("2006-01-02 15:04:05Z07:00"), "{{.Name}}", len(requestPayload), time.Since(start), marshalTime)
-    }()
+    fmt.Printf("[%v] %s (req: %d bytes) started\n", time.Now().Format("2006-01-02 15:04:05Z07:00"), "{{.Name}}", len(requestPayload))
     {{end -}}
 
     var data {{.ResponseName}}
@@ -56,6 +53,14 @@ func {{.Name}}(
             resp,
         )
     }, 8)
+
+    {{if .Config.LogTiming -}}
+    responsePayload, err := json.Marshal(data)
+    if err != nil {
+        return nil, err
+    }
+    fmt.Printf("[%v] %s (req: %d bytes res: %d bytes) took %v\n", time.Now().Format("2006-01-02 15:04:05Z07:00"), "{{.Name}}", len(requestPayload), len(responsePayload), time.Since(start))
+    {{end -}}
 
     return &data, {{if .Config.Extensions -}}resp.Extensions,{{end -}} err
 }
