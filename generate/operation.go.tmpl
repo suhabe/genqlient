@@ -35,6 +35,7 @@ func {{.Name}}(
     {{end}}
 
     {{if .Config.LogTiming -}}
+    if logTiming := ctx.Value(n.Auth0NamespaceContextVar); logTiming != nil {
     start := time.Now()
     requestPayload, err := json.Marshal(req.Variables)
     if err != nil {
@@ -49,11 +50,13 @@ func {{.Name}}(
     var data {{.ResponseName}}
     resp := &graphql.Response{Data: &data}
 
-    err = client.MakeRequest(
-        {{if ne .Config.ContextType "-"}}ctx{{else}}nil{{end}},
-        req,
-        resp,
-    )
-	
+    genqlient.Retry(func() error {
+        return client.MakeRequest(
+            {{if ne .Config.ContextType "-"}}ctx{{else}}nil{{end}},
+            req,
+            resp,
+        )
+    }, 8)
+
     return &data, {{if .Config.Extensions -}}resp.Extensions,{{end -}} err
 }
