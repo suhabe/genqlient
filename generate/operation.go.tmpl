@@ -36,11 +36,7 @@ func {{.Name}}(
 
     {{if .Config.LogTiming -}}
     start := time.Now()
-    requestPayload, err := json.Marshal(req.Variables)
-    if err != nil {
-        return nil, err
-    }
-    fmt.Printf("[%v] %s (req: %d bytes) started\n", time.Now().Format("2006-01-02 15:04:05Z07:00"), "{{.Name}}", len(requestPayload))
+    genqlient.LogPre(ctx, "{{.Name}}", req)
     {{end -}}
 
     var data {{.ResponseName}}
@@ -55,11 +51,7 @@ func {{.Name}}(
     }, 8)
 
     {{if .Config.LogTiming -}}
-    responsePayload, err := json.Marshal(data)
-    if err != nil {
-        return nil, err
-    }
-    fmt.Printf("[%v] %s (req: %d bytes res: %d bytes) took %v\n", time.Now().Format("2006-01-02 15:04:05Z07:00"), "{{.Name}}", len(requestPayload), len(responsePayload), time.Since(start))
+    genqlient.LogPost(ctx, "{{.Name}}", req, resp, start)
     {{end -}}
 
     return &data, {{if .Config.Extensions -}}resp.Extensions,{{end -}} err
