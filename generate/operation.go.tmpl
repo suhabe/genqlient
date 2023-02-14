@@ -53,7 +53,7 @@ func {{.Name}}(
         if err != nil {
         	genqlient.LogPost(ctx, "{{.Name}}", req, resp, start, err)
             return nil, err
-        }
+        } 
 
         genqlient.LogPost(ctx, "{{.Name}}", req, resp, start, nil)
 
