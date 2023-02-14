@@ -13,46 +13,52 @@ func {{.Name}}(
     {{end -}}
     {{end -}}
 ) (*{{.ResponseName}}, {{if .Config.Extensions -}}map[string]interface{},{{end}} error) {
-    req := &graphql.Request{
-        OpName: "{{.Name}}",
-        Query:  `{{.Body}}`,
-    {{if .Input -}}
-        Variables: &{{.Input.GoName}}{
-        {{range .Input.Fields -}}
-        {{.GoName}}: {{.GraphQLName}},
+
+	resp, err := genqlient.Retry(ctx, "{{.Name}}", input, func() (*{{.ResponseName}},error) {
+
+        req := &graphql.Request{
+            OpName: "{{.Name}}",
+            Query:  `{{.Body}}`,
+        {{if .Input -}}
+            Variables: &{{.Input.GoName}}{
+            {{range .Input.Fields -}}
+            {{.GoName}}: {{.GraphQLName}},
+            {{end -}}
+            },
         {{end -}}
-        },
-    {{end -}}
-    }
-    var err error
-    {{if .Config.ClientGetter -}}
-    var client graphql.Client
+        }
 
-    client, err = {{ref .Config.ClientGetter}}({{if ne .Config.ContextType "-"}}ctx{{else}}{{end}})
-    if err != nil {
-        return nil, {{if .Config.Extensions -}}nil,{{end -}} err
-    }
-    {{end}}
+        start := time.Now()
+        genqlient.LogPre(ctx, "{{.Name}}", req)
 
-    {{if .Config.LogTiming -}}
-    start := time.Now()
-    genqlient.LogPre(ctx, "{{.Name}}", req)
-    {{end -}}
+        var err error
+        {{if .Config.ClientGetter -}}
+        var client graphql.Client
 
-    var data {{.ResponseName}}
-    resp := &graphql.Response{Data: &data}
+        client, err = {{ref .Config.ClientGetter}}({{if ne .Config.ContextType "-"}}ctx{{else}}{{end}})
+        if err != nil {
+            genqlient.LogPost(ctx, "{{.Name}}", req, resp, start, err)
+            return nil, {{if .Config.Extensions -}}nil,{{end -}} err
+        }
+        {{end}}
 
-    genqlient.Retry(func() error {
-        return client.MakeRequest(
+        var data {{.ResponseName}}
+        resp := &graphql.Response{Data: &data}
+
+        err = client.MakeRequest(
             {{if ne .Config.ContextType "-"}}ctx{{else}}nil{{end}},
             req,
             resp,
         )
-    }, 8)
+        if err != nil {
+        	genqlient.LogPost(ctx, "{{.Name}}", req, resp, start, err)
+            return nil, err
+        }
 
-    {{if .Config.LogTiming -}}
-    genqlient.LogPost(ctx, "{{.Name}}", req, resp, start)
-    {{end -}}
+        genqlient.LogPost(ctx, "{{.Name}}", req, resp, start)
 
-    return &data, {{if .Config.Extensions -}}resp.Extensions,{{end -}} err
+        return &data, {{if .Config.Extensions -}}resp.Extensions,{{end -}} err
+    })
+
+	return resp, err
 }
