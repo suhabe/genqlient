@@ -31,6 +31,9 @@ func {{.Name}}(
         start := time.Now()
         genqlient.LogPre(ctx, "{{.Name}}", req)
 
+        var data {{.ResponseName}}
+        resp := &graphql.Response{Data: &data}
+
         var err error
         {{if .Config.ClientGetter -}}
         var client graphql.Client
@@ -42,9 +45,6 @@ func {{.Name}}(
         }
         {{end}}
 
-        var data {{.ResponseName}}
-        resp := &graphql.Response{Data: &data}
-
         err = client.MakeRequest(
             {{if ne .Config.ContextType "-"}}ctx{{else}}nil{{end}},
             req,
@@ -55,9 +55,9 @@ func {{.Name}}(
             return nil, err
         }
 
-        genqlient.LogPost(ctx, "{{.Name}}", req, resp, start)
+        genqlient.LogPost(ctx, "{{.Name}}", req, resp, start, nil)
 
-        return &data, {{if .Config.Extensions -}}resp.Extensions,{{end -}} err
+        return &data, {{if .Config.Extensions -}}resp.Extensions,{{end -}} nil
     })
 
 	return resp, err
