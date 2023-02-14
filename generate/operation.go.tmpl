@@ -14,7 +14,7 @@ func {{.Name}}(
     {{end -}}
 ) (*{{.ResponseName}}, {{if .Config.Extensions -}}map[string]interface{},{{end}} error) {
 
-	resp, err := genqlient.Retry(ctx, "{{.Name}}", input, func() (*{{.ResponseName}},error) {
+	resp, err := genqlient.Retry(ctx, "{{.Name}}", func() (*{{.ResponseName}},error) {
 
         req := &graphql.Request{
             OpName: "{{.Name}}",
@@ -53,7 +53,7 @@ func {{.Name}}(
         if err != nil {
         	genqlient.LogPost(ctx, "{{.Name}}", req, resp, start, err)
             return nil, err
-        } 
+        }
 
         genqlient.LogPost(ctx, "{{.Name}}", req, resp, start, nil)
 
