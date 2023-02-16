@@ -14,7 +14,7 @@ func {{.Name}}(
     {{end -}}
 ) (*{{.ResponseName}}, {{if .Config.Extensions -}}map[string]interface{},{{end}} error) {
 
-	return genqlient.Retry(ctx, "{{.Name}}", func() (*{{.ResponseName}},error) {
+	return genqlient.Retry(ctx, "{{.Name}}", func(retry int) (*{{.ResponseName}},error) {
 
         req := &graphql.Request{
             OpName: "{{.Name}}",
@@ -40,7 +40,7 @@ func {{.Name}}(
 
         client, err = {{ref .Config.ClientGetter}}({{if ne .Config.ContextType "-"}}ctx{{else}}{{end}})
         if err != nil {
-            genqlient.LogPost(ctx, "{{.Name}}", req, resp, start, err)
+            genqlient.LogPost(ctx, "{{.Name}}", req, resp, retry, start, err)
             return nil, {{if .Config.Extensions -}}nil,{{end -}} err
         }
         {{end}}
@@ -51,11 +51,11 @@ func {{.Name}}(
             resp,
         )
         if err != nil {
-        	genqlient.LogPost(ctx, "{{.Name}}", req, resp, start, err)
+        	genqlient.LogPost(ctx, "{{.Name}}", req, resp, retry, start, err)
             return nil, err
         }
 
-        genqlient.LogPost(ctx, "{{.Name}}", req, resp, start, nil)
+        genqlient.LogPost(ctx, "{{.Name}}", req, resp, retry, start, nil)
 
         return &data, {{if .Config.Extensions -}}resp.Extensions,{{end -}} nil
     })
