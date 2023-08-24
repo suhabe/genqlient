@@ -117,8 +117,17 @@ type Request struct {
 	// require this unless there are multiple queries in the
 	// document, but genqlient sets it unconditionally anyway.
 	OpName string `json:"operationName"`
+
+	Extensions *Extensions `json:"extensions,omitempty"`
 }
 
+type Extensions struct {
+	PersistedQuery *ExtensionsPersistedQuery `json:"persistedQuery,omitempty"`
+}
+
+type ExtensionsPersistedQuery struct {
+	Sha256Hash string `json:"sha256Hash,omitempty"`
+}
 // Response that contains data returned by the GraphQL API.
 //
 // Typically, GraphQL APIs will return a JSON payload of the form

@@ -6,7 +6,9 @@ package generate
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/json"
+	"fmt"
 	"go/format"
 	"io"
 	"sort"
@@ -65,7 +67,8 @@ type operation struct {
 	// The original filename from which we got this query.
 	SourceFilename string `json:"sourceLocation"`
 	// The config within which we are generating code.
-	Config *Config `json:"-"`
+	Config    *Config `json:"-"`
+	QueryHash string  `json:"queryHash"`
 }
 
 type exportedOperations struct {
@@ -293,6 +296,10 @@ func (g *generator) addOperation(op *ast.OperationDefinition) error {
 		sourceFilename = sourceFilename[:i]
 	}
 
+	body := "\n" + builder.String()
+	queryHash := sha256.New()
+	queryHash.Write([]byte(body))
+
 	g.Operations = append(g.Operations, &operation{
 		Type: op.Operation,
 		Name: op.Name,
@@ -300,11 +307,12 @@ func (g *generator) addOperation(op *ast.OperationDefinition) error {
 		// The newline just makes it format a little nicer.  We add it here
 		// rather than in the template so exported operations will match
 		// *exactly* what we send to the server.
-		Body:           "\n" + builder.String(),
+		Body:           body,
 		Input:          inputType,
 		ResponseName:   responseType.Reference(),
 		SourceFilename: sourceFilename,
 		Config:         g.Config, // for the convenience of the template
+		QueryHash:      fmt.Sprintf("%x", queryHash.Sum(nil)),
 	})
 
 	return nil
