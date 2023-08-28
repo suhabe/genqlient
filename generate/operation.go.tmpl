@@ -14,16 +14,11 @@ func {{.Name}}(
     {{end -}}
 ) (*{{.ResponseName}}, {{if .Config.Extensions -}}map[string]interface{},{{end}} error) {
 
-	return genqlient.Retry(ctx, "{{.Name}}", func(retry int, sendQuery bool) (*{{.ResponseName}},error) {
-
-        query := ``
-        if sendQuery {
-            query = `{{.Body}}`
-        }
+	return genqlient.Retry(ctx, "{{.Name}}", func(retry int) (*{{.ResponseName}},error) {
 
         req := &graphql.Request{
             OpName: "{{.Name}}",
-            Query:  query,
+            Query:  `{{.Body}}`,
         {{if .Input -}}
             Variables: &{{.Input.GoName}}{
             {{range .Input.Fields -}}
@@ -31,11 +26,6 @@ func {{.Name}}(
             {{end -}}
             },
         {{end -}}
-            Extensions: &graphql.Extensions{
-                PersistedQuery: &graphql.ExtensionsPersistedQuery{
-                    Sha256Hash: "{{.QueryHash}}",
-                },
-            },
         }
 
         start := time.Now()
