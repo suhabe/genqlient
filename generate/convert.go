@@ -239,8 +239,10 @@ func (g *generator) convertType(
 
 	if typ.Elem != nil {
 		// Type is a list.
+		copiedOptions := *options
+		copiedQueryOptions := *queryOptions
 		elem, err := g.convertType(
-			namePrefix, typ.Elem, selectionSet, options, queryOptions)
+			namePrefix, typ.Elem, selectionSet, &copiedOptions, &copiedQueryOptions)
 		return &goSliceType{elem}, err
 	}
 
@@ -425,7 +427,7 @@ func (g *generator) convertDefinition(
 			// Several of the arguments don't really make sense here:
 			// (note field.Type is necessarily a scalar, input, or enum)
 			//  - namePrefix is ignored for input types and enums (see
-			//    names.go) and for scalars (they use client-specified
+			//    names.go) and for scalars (they use odclient-specified
 			//    names)
 			//  - selectionSet is ignored for input types, because we
 			//    just use all fields of the type; and it's nonexistent

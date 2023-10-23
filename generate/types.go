@@ -371,7 +371,7 @@ func (typ *goStructType) WriteDefinition(w io.Writer, g *generator) error {
 	for _, field := range typ.Fields {
 		writeDescription(w, field.Description)
 		jsonTag := `"` + field.JSONName
-		if true || field.Omitempty {
+		if !(typ.IsInput && strings.HasPrefix(typ.GraphQLName, "Add") && strings.HasSuffix(typ.GraphQLName, "Input") && field.GoType.SliceDepth() != 0) || field.Omitempty {
 			jsonTag += ",omitempty"
 		}
 		jsonTag += `"`
