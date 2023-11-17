@@ -37,7 +37,7 @@ func goConstName(s string) string {
 		var ret rune
 		if r == '_' {
 			ret = -1
-		} else if prev == '_' || prev == 0 {
+		} else if prev == '_' || prev == 0  || unicode.IsUpper(r) {
 			ret = unicode.ToUpper(r)
 		} else {
 			ret = unicode.ToLower(r)
